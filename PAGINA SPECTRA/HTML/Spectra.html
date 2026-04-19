@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema PRO</title>
+<link rel="stylesheet" href="style.css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login">
+  <div class="card">
+    <h2>Login</h2>
+    <input id="user" placeholder="Usuario">
+    <input id="pass" type="password" placeholder="Contraseña">
+    <button onclick="login()">Ingresar</button>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="panelAdmin" class="layout hidden">
+<div class="sidebar">
+<h3>ADMIN</h3>
+<button onclick="mostrarSeccion('tecnicos')">Técnicos</button>
+<button onclick="mostrarSeccion('proyectos')">Proyectos</button>
+<button onclick="mostrarSeccion('informes')">Informes</button>
+<button onclick="logout()">Salir</button>
+</div>
+
+<div class="main">
+<div id="tecnicosSec" class="card hidden">
+<input id="nuevoTecnico">
+<button onclick="agregarTecnico()">Agregar</button>
+<div id="listaTecnicos"></div>
+</div>
+
+<div id="proyectosSec" class="card hidden">
+<input id="numeroProyecto">
+<input id="nombreSitio">
+<button onclick="agregarProyecto()">Agregar</button>
+<div id="listaProyectos"></div>
+</div>
+
+<div id="informesSec" class="card hidden"></div>
+</div>
+</div>
+
+<!-- TECNICO -->
+<div id="panelTecnico" class="hidden main">
+
+<div class="card">
+<select id="proyecto"></select>
+<input id="sitio" readonly>
+<input type="date" id="fecha">
+<select id="personas" multiple></select>
+<textarea id="descripcion"></textarea>
+<input type="file" id="fotos" multiple>
+<button onclick="guardarInforme()">Guardar</button>
+</div>
+
+<div id="listaInformes"></div>
+<button onclick="logout()">Salir</button>
+</div>
+
+<!-- MODAL -->
+<div id="modalEditar" class="modal hidden">
+<div class="modal-content">
+<input type="date" id="editFecha">
+<textarea id="editDescripcion"></textarea>
+<button onclick="guardarEdicion()">Guardar</button>
+<button onclick="cerrarModal()">Cerrar</button>
+</div>
+</div>
+
+<script src="spectra.js"></script>
+</body>
+</html>
