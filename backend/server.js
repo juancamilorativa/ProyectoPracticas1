@@ -11,14 +11,13 @@ const app = express();
 /* =========================
    🔐 CORS PRODUCCIÓN
 ========================= */
-app.get("/test-db", (req, res) => {
- db.query("SELECT 1", (err, result) => {
-  if (err) {
-   return res.json({ ok: false, error: err });
-  }
-  res.json({ ok: true, result });
- });
-});
+app.use(cors({
+ origin: "*",
+ methods: ["GET","POST","DELETE"]
+}));
+
+app.use(express.json());
+app.use("/uploads", express.static("uploads"));
 
 /* =========================
    🔌 MYSQL
