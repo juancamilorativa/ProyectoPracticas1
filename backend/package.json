@@ -18,5 +18,13 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TU_USUARIO/tu-repo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TU_USUARIO/tu-repo/issues"
+  },
+  "homepage": "https://github.com/TU_USUARIO/tu-repo#readme"
 }
