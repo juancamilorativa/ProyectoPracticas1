@@ -4,15 +4,23 @@ const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
 const multer = require("multer");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 
-app.use(cors());
+/* =========================
+   🔐 CORS PRODUCCIÓN
+========================= */
+app.use(cors({
+ origin: "*",
+ methods: ["GET","POST","DELETE"]
+}));
+
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
 /* =========================
-   🔌 MYSQL (CORRECTO SIMPLE)
+   🔌 MYSQL
 ========================= */
 const db = mysql.createConnection({
  host: process.env.DB_HOST,
@@ -22,53 +30,79 @@ const db = mysql.createConnection({
  port: process.env.DB_PORT
 });
 
-db.connect((err) => {
- if (err) {
-  console.log("❌ DB error:", err);
- } else {
-  console.log("✅ MySQL conectado");
- }
+db.connect(err => {
+ if (err) console.log("❌ DB error:", err);
+ else console.log("✅ MySQL conectado");
 });
 
 /* =========================
-   🔐 LOGIN
+   🔐 LOGIN (ARREGLADO)
 ========================= */
 app.post("/login", (req, res) => {
+
  const { user, pass } = req.body;
 
  db.query(
   "SELECT * FROM usuarios WHERE user=? AND pass=?",
   [user, pass],
   (err, result) => {
-   if (err) return res.status(500).send("Error");
-   if (result.length === 0) return res.status(401).send("Error login");
 
-   res.json(result[0]);
+   if (err) return res.status(500).json({ error: "DB error" });
+   if (result.length === 0) return res.status(401).json({ error: "Login incorrecto" });
+
+   const usuario = result[0];
+
+   // 🔥 TOKEN REAL
+   const token = jwt.sign(
+    { id: usuario.id, role: usuario.role },
+    "secret_key",
+    { expiresIn: "8h" }
+   );
+
+   res.json({
+    token,
+    role: usuario.role,
+    user: usuario.user
+   });
+
   }
  );
+
 });
+
+/* =========================
+   🔐 MIDDLEWARE TOKEN
+========================= */
+function verifyToken(req, res, next) {
+ const auth = req.headers["authorization"];
+
+ if (!auth) return res.status(403).send("No token");
+
+ const token = auth.split(" ")[1];
+
+ jwt.verify(token, "secret_key", (err, decoded) => {
+  if (err) return res.status(403).send("Token inválido");
+
+  req.user = decoded;
+  next();
+ });
+}
 
 /* =========================
    👷 TECNICOS
 ========================= */
-app.get("/tecnicos", (req, res) => {
- db.query("SELECT * FROM tecnicos", (err, r) => {
-  res.json(r);
- });
+app.get("/tecnicos", verifyToken, (req, res) => {
+ db.query("SELECT * FROM tecnicos", (err, r) => res.json(r));
 });
 
-app.post("/tecnicos", (req, res) => {
- db.query(
-  "INSERT INTO tecnicos(nombre) VALUES(?)",
-  [req.body.nombre],
+app.post("/tecnicos", verifyToken, (req, res) => {
+ db.query("INSERT INTO tecnicos(nombre) VALUES(?)", [req.body.nombre],
   () => res.sendStatus(200)
  );
 });
 
-app.delete("/tecnicos/:id", (req, res) => {
- db.query(
-  "DELETE FROM tecnicos WHERE id=?",
-  [req.params.id],
+app.delete("/tecnicos/:id", verifyToken, (req, res) => {
+ db.query("DELETE FROM tecnicos WHERE id=?", [req.params.id],
   () => res.sendStatus(200)
  );
 });
@@ -76,13 +110,11 @@ app.delete("/tecnicos/:id", (req, res) => {
 /* =========================
    📁 PROYECTOS
 ========================= */
-app.get("/proyectos", (req, res) => {
- db.query("SELECT * FROM proyectos", (err, r) => {
-  res.json(r);
- });
+app.get("/proyectos", verifyToken, (req, res) => {
+ db.query("SELECT * FROM proyectos", (err, r) => res.json(r));
 });
 
-app.post("/proyectos", (req, res) => {
+app.post("/proyectos", verifyToken, (req, res) => {
  db.query(
   "INSERT INTO proyectos(numero,sitio) VALUES(?,?)",
   [req.body.numero, req.body.sitio],
@@ -102,7 +134,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-app.post("/informes", upload.array("fotos"), (req, res) => {
+app.post("/informes", verifyToken, upload.array("fotos"), (req, res) => {
+
  const { proyecto, sitio, fecha, descripcion } = req.body;
 
  db.query(
@@ -110,18 +143,15 @@ app.post("/informes", upload.array("fotos"), (req, res) => {
   [proyecto, sitio, fecha, descripcion],
   () => res.sendStatus(200)
  );
+
 });
 
-app.get("/informes", (req, res) => {
- db.query("SELECT * FROM informes ORDER BY id DESC", (err, r) => {
-  res.json(r);
- });
+app.get("/informes", verifyToken, (req, res) => {
+ db.query("SELECT * FROM informes ORDER BY id DESC", (err, r) => res.json(r));
 });
 
-app.delete("/informes/:id", (req, res) => {
- db.query(
-  "DELETE FROM informes WHERE id=?",
-  [req.params.id],
+app.delete("/informes/:id", verifyToken, (req, res) => {
+ db.query("DELETE FROM informes WHERE id=?", [req.params.id],
   () => res.sendStatus(200)
  );
 });
@@ -132,5 +162,5 @@ app.delete("/informes/:id", (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
- console.log("🚀 SaaS running on port " + PORT);
+ console.log("🚀 API running on " + PORT);
 });
