@@ -9,18 +9,14 @@ const jwt = require("jsonwebtoken");
 const app = express();
 
 /* =========================
-   🔐 CORS PRODUCCIÓN
+   CONFIG
 ========================= */
-app.use(cors({
- origin: "*",
- methods: ["GET","POST","DELETE"]
-}));
-
+app.use(cors({ origin: "*"}));
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
 /* =========================
-   🔌 MYSQL
+   MYSQL
 ========================= */
 const db = mysql.createConnection({
  host: process.env.DB_HOST,
@@ -36,94 +32,115 @@ db.connect(err => {
 });
 
 /* =========================
-   🔐 LOGIN (ARREGLADO)
+   RESPUESTAS SEGURAS
+========================= */
+function ok(res, data = {}) {
+ return res.json({ ok: true, data });
+}
+
+function fail(res, msg = "Error servidor", code = 500) {
+ return res.status(code).json({ ok: false, error: msg });
+}
+
+/* =========================
+   LOGIN
 ========================= */
 app.post("/login", (req, res) => {
 
  const { user, pass } = req.body;
+
+ if (!user || !pass) return fail(res, "Datos incompletos", 400);
 
  db.query(
   "SELECT * FROM usuarios WHERE user=? AND pass=?",
   [user, pass],
   (err, result) => {
 
-   if (err) return res.status(500).json({ error: "DB error" });
-   if (result.length === 0) return res.status(401).json({ error: "Login incorrecto" });
+   if (err) return fail(res, err.message);
+   if (result.length === 0) return fail(res, "Login incorrecto", 401);
 
-   const usuario = result[0];
+   const u = result[0];
 
-   // 🔥 TOKEN REAL
    const token = jwt.sign(
-    { id: usuario.id, role: usuario.role },
-    "secret_key",
+    { id: u.id, role: u.role },
+    process.env.JWT_SECRET,
     { expiresIn: "8h" }
    );
 
-   res.json({
-    token,
-    role: usuario.role,
-    user: usuario.user
-   });
-
+   ok(res, { token, role: u.role, user: u.user });
   }
  );
-
 });
 
 /* =========================
-   🔐 MIDDLEWARE TOKEN
+   TOKEN
 ========================= */
 function verifyToken(req, res, next) {
- const auth = req.headers["authorization"];
 
- if (!auth) return res.status(403).send("No token");
+ const auth = req.headers["authorization"];
+ if (!auth) return fail(res, "No token", 403);
 
  const token = auth.split(" ")[1];
 
- jwt.verify(token, "secret_key", (err, decoded) => {
-  if (err) return res.status(403).send("Token inválido");
-
+ jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+  if (err) return fail(res, "Token inválido", 403);
   req.user = decoded;
   next();
  });
 }
 
 /* =========================
-   👷 TECNICOS
+   TECNICOS
 ========================= */
 app.get("/tecnicos", verifyToken, (req, res) => {
- db.query("SELECT * FROM tecnicos", (err, r) => res.json(r));
+ db.query("SELECT * FROM tecnicos", (err, r) => {
+  if (err) return fail(res, err.message);
+  ok(res, r);
+ });
 });
 
 app.post("/tecnicos", verifyToken, (req, res) => {
- db.query("INSERT INTO tecnicos(nombre) VALUES(?)", [req.body.nombre],
-  () => res.sendStatus(200)
- );
-});
 
-app.delete("/tecnicos/:id", verifyToken, (req, res) => {
- db.query("DELETE FROM tecnicos WHERE id=?", [req.params.id],
-  () => res.sendStatus(200)
+ if (!req.body.nombre) return fail(res, "Nombre requerido", 400);
+
+ db.query(
+  "INSERT INTO tecnicos(nombre) VALUES(?)",
+  [req.body.nombre],
+  (err, result) => {
+   if (err) return fail(res, err.message);
+   ok(res, { id: result.insertId });
+  }
  );
 });
 
 /* =========================
-   📁 PROYECTOS
+   PROYECTOS
 ========================= */
 app.get("/proyectos", verifyToken, (req, res) => {
- db.query("SELECT * FROM proyectos", (err, r) => res.json(r));
+ db.query("SELECT * FROM proyectos", (err, r) => {
+  if (err) return fail(res, err.message);
+  ok(res, r);
+ });
 });
 
 app.post("/proyectos", verifyToken, (req, res) => {
+
+ const { numero, sitio } = req.body;
+
+ if (!numero || !sitio) return fail(res, "Campos incompletos", 400);
+
  db.query(
   "INSERT INTO proyectos(numero,sitio) VALUES(?,?)",
-  [req.body.numero, req.body.sitio],
-  () => res.sendStatus(200)
+  [numero, sitio],
+  (err, result) => {
+   if (err) return fail(res, err.message);
+   ok(res, { id: result.insertId });
+  }
  );
 });
 
 /* =========================
-   📝 INFORMES
+   INFORMES
 ========================= */
 const storage = multer.diskStorage({
  destination: "uploads/",
@@ -134,30 +151,41 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+app.get("/informes", verifyToken, (req, res) => {
+ db.query("SELECT * FROM informes ORDER BY id DESC", (err, r) => {
+  if (err) return fail(res, err.message);
+  ok(res, r);
+ });
+});
+
 app.post("/informes", verifyToken, upload.array("fotos"), (req, res) => {
 
  const { proyecto, sitio, fecha, descripcion } = req.body;
 
+ if (!proyecto || !fecha || !descripcion) {
+  return fail(res, "Datos incompletos", 400);
+ }
+
  db.query(
   "INSERT INTO informes(proyecto,sitio,fecha,descripcion) VALUES (?,?,?,?)",
   [proyecto, sitio, fecha, descripcion],
-  () => res.sendStatus(200)
- );
-
-});
-
-app.get("/informes", verifyToken, (req, res) => {
- db.query("SELECT * FROM informes ORDER BY id DESC", (err, r) => res.json(r));
-});
-
-app.delete("/informes/:id", verifyToken, (req, res) => {
- db.query("DELETE FROM informes WHERE id=?", [req.params.id],
-  () => res.sendStatus(200)
+  (err, result) => {
+   if (err) return fail(res, err.message);
+   ok(res, { id: result.insertId });
+  }
  );
 });
 
 /* =========================
-   🚀 SERVER
+   ERROR GLOBAL
+========================= */
+app.use((err, req, res, next) => {
+ console.error(err);
+ res.status(500).json({ ok: false, error: "Error interno" });
+});
+
+/* =========================
+   SERVER
 ========================= */
 const PORT = process.env.PORT || 3000;
 
