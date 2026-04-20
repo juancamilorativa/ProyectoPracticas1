@@ -1,151 +1,244 @@
-let rolActual = "";
-let editId = null;
+let token = null;
 
-/* LOGIN */
-function login(){
+/* =========================
+   LOGIN SAAS (JWT)
+========================= */
+function login() {
 
- fetch("http://localhost:3000/login",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({
-   user: document.getElementById("user").value,
-   pass: document.getElementById("pass").value
+ fetch("https://TU-BACKEND.onrender.com/login", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+   user: user.value,
+   pass: pass.value
   })
  })
- .then(res=>{
-  if(!res.ok) throw new Error("Credenciales incorrectas");
-  return res.json();
+ .then(r => {
+  if (!r.ok) throw new Error("Login incorrecto");
+  return r.json();
  })
- .then(u=>{
+ .then(data => {
 
-  document.getElementById("login").classList.add("hidden");
+  token = data.token;
 
-  if(u.rol==="admin"){
-   document.getElementById("panelAdmin").classList.remove("hidden");
-  }else{
-   document.getElementById("panelTecnico").classList.remove("hidden");
+  loginDiv.classList.add("hidden");
+
+  if (data.role === "admin") {
+   panelAdmin.classList.remove("hidden");
+   mostrarSeccion("tecnicos");
+  } else {
+   panelTecnico.classList.remove("hidden");
    cargarProyectos();
    cargarTecnicos();
    mostrarInformes();
   }
 
- })
- .catch(()=>alert("Usuario o contraseña incorrectos"));
+ });
 }
 
-/* ADMIN */
+/* =========================
+   HEADERS SAAS
+========================= */
+function authHeader(){
+ return {
+  "Authorization": "Bearer " + token
+ };
+}
+
+/* =========================
+   ADMIN SECCIONES
+========================= */
 function mostrarSeccion(s){
+
  tecnicosSec.classList.add("hidden");
  proyectosSec.classList.add("hidden");
  informesSec.classList.add("hidden");
 
- if(s==="tecnicos"){tecnicosSec.classList.remove("hidden");mostrarTecnicos();}
- if(s==="proyectos"){proyectosSec.classList.remove("hidden");mostrarProyectos();}
- if(s==="informes"){informesSec.classList.remove("hidden");mostrarInformesAdmin();}
+ if (s === "tecnicos") {
+  tecnicosSec.classList.remove("hidden");
+  mostrarTecnicos();
+ }
+
+ if (s === "proyectos") {
+  proyectosSec.classList.remove("hidden");
+  mostrarProyectos();
+ }
+
+ if (s === "informes") {
+  informesSec.classList.remove("hidden");
+  mostrarInformesAdmin();
+ }
+
 }
 
-/* TECNICOS */
+/* =========================
+   TECNICOS SAAS
+========================= */
 function mostrarTecnicos(){
- fetch("http://localhost:3000/tecnicos")
- .then(r=>r.json())
- .then(d=>{
-  listaTecnicos.innerHTML="";
-  d.forEach(t=>{
-   listaTecnicos.innerHTML+=`${t.nombre}
-   <button onclick="eliminarTecnico(${t.id})">X</button><br>`;
+ fetch("https://TU-BACKEND.onrender.com/tecnicos", {
+  headers: authHeader()
+ })
+ .then(r => r.json())
+ .then(d => {
+  listaTecnicos.innerHTML = "";
+  d.forEach(t => {
+   listaTecnicos.innerHTML += `
+   <div>
+    ${t.nombre}
+    <button onclick="eliminarTecnico(${t.id})">X</button>
+   </div>`;
   });
  });
 }
 
 function agregarTecnico(){
- fetch("http://localhost:3000/tecnicos",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({nombre:nuevoTecnico.value})
+ fetch("https://TU-BACKEND.onrender.com/tecnicos", {
+  method: "POST",
+  headers: {
+   "Content-Type": "application/json",
+   ...authHeader()
+  },
+  body: JSON.stringify({
+   nombre: nuevoTecnico.value
+  })
  }).then(mostrarTecnicos);
 }
 
-/* PROYECTOS */
+/* =========================
+   PROYECTOS SAAS
+========================= */
 function mostrarProyectos(){
- fetch("http://localhost:3000/proyectos")
- .then(r=>r.json())
- .then(d=>{
-  listaProyectos.innerHTML="";
-  d.forEach(p=>{
-   listaProyectos.innerHTML+=`${p.numero}-${p.sitio}<br>`;
+ fetch("https://TU-BACKEND.onrender.com/proyectos", {
+  headers: authHeader()
+ })
+ .then(r => r.json())
+ .then(d => {
+  listaProyectos.innerHTML = "";
+  d.forEach(p => {
+   listaProyectos.innerHTML += `
+   <div>${p.numero} - ${p.sitio}</div>`;
   });
  });
 }
 
 function agregarProyecto(){
- fetch("http://localhost:3000/proyectos",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({numero:numeroProyecto.value,sitio:nombreSitio.value})
+ fetch("https://TU-BACKEND.onrender.com/proyectos", {
+  method: "POST",
+  headers: {
+   "Content-Type": "application/json",
+   ...authHeader()
+  },
+  body: JSON.stringify({
+   numero: numeroProyecto.value,
+   sitio: nombreSitio.value
+  })
  }).then(mostrarProyectos);
 }
 
-/* CARGAS */
+/* =========================
+   CARGAS TECNICO
+========================= */
 function cargarProyectos(){
- fetch("http://localhost:3000/proyectos")
- .then(r=>r.json())
- .then(d=>{
-  proyecto.innerHTML="";
-  d.forEach(p=>proyecto.innerHTML+=`<option>${p.numero}</option>`);
+ fetch("https://TU-BACKEND.onrender.com/proyectos", {
+  headers: authHeader()
+ })
+ .then(r => r.json())
+ .then(d => {
+  proyecto.innerHTML = "";
+  d.forEach(p => {
+   proyecto.innerHTML += `<option>${p.numero}</option>`;
+  });
  });
 }
 
 function cargarTecnicos(){
- fetch("http://localhost:3000/tecnicos")
- .then(r=>r.json())
- .then(d=>{
-  personas.innerHTML="";
-  d.forEach(t=>personas.innerHTML+=`<option>${t.nombre}</option>`);
+ fetch("https://TU-BACKEND.onrender.com/tecnicos", {
+  headers: authHeader()
+ })
+ .then(r => r.json())
+ .then(d => {
+  personas.innerHTML = "";
+  d.forEach(t => {
+   personas.innerHTML += `<option>${t.nombre}</option>`;
+  });
  });
 }
 
-/* INFORMES */
+/* =========================
+   INFORMES SAAS (UPLOAD REAL)
+========================= */
 function guardarInforme(){
- let fd=new FormData();
- fd.append("proyecto",proyecto.value);
- fd.append("sitio",sitio.value);
- fd.append("fecha",fecha.value);
- fd.append("descripcion",descripcion.value);
- fd.append("personas",JSON.stringify([...personas.selectedOptions].map(o=>o.value)));
 
- for(let f of fotos.files) fd.append("fotos",f);
+ let fd = new FormData();
 
- fetch("http://localhost:3000/informes",{method:"POST",body:fd})
+ fd.append("proyecto", proyecto.value);
+ fd.append("sitio", sitio.value);
+ fd.append("fecha", fecha.value);
+ fd.append("descripcion", descripcion.value);
+ fd.append("personas", JSON.stringify([...personas.selectedOptions].map(o => o.value)));
+
+ for (let f of fotos.files) {
+  fd.append("fotos", f);
+ }
+
+ fetch("https://TU-BACKEND.onrender.com/informes", {
+  method: "POST",
+  headers: {
+   "Authorization": "Bearer " + token
+  },
+  body: fd
+ })
  .then(mostrarInformes);
 }
 
+/* =========================
+   LISTAR INFORMES
+========================= */
 function mostrarInformes(){
- fetch("http://localhost:3000/informes")
- .then(r=>r.json())
- .then(d=>{
-  listaInformes.innerHTML="";
-  d.forEach(i=>{
-   listaInformes.innerHTML+=`${i.sitio} - ${i.fecha}<br>`;
+ fetch("https://TU-BACKEND.onrender.com/informes", {
+  headers: authHeader()
+ })
+ .then(r => r.json())
+ .then(d => {
+  listaInformes.innerHTML = "";
+  d.forEach(i => {
+   listaInformes.innerHTML += `
+   <div>
+    ${i.sitio} - ${i.fecha}
+   </div>`;
   });
  });
 }
 
 function mostrarInformesAdmin(){
- fetch("http://localhost:3000/informes")
- .then(r=>r.json())
- .then(d=>{
-  informesSec.innerHTML="";
-  d.forEach(i=>{
-   informesSec.innerHTML+=`
-   ${i.sitio}
-   <button onclick="eliminarInforme(${i.id})">X</button><br>`;
+ fetch("https://TU-BACKEND.onrender.com/informes", {
+  headers: authHeader()
+ })
+ .then(r => r.json())
+ .then(d => {
+  informesSec.innerHTML = "";
+  d.forEach(i => {
+   informesSec.innerHTML += `
+   <div>
+    ${i.sitio}
+    <button onclick="eliminarInforme(${i.id})">X</button>
+   </div>`;
   });
  });
 }
 
+/* =========================
+   DELETE
+========================= */
 function eliminarInforme(id){
- fetch(`http://localhost:3000/informes/${id}`,{method:"DELETE"})
- .then(mostrarInformesAdmin);
+ fetch("https://TU-BACKEND.onrender.com/informes/" + id, {
+  method: "DELETE",
+  headers: authHeader()
+ }).then(mostrarInformesAdmin);
 }
 
-function logout(){location.reload();}
+/* LOGOUT */
+function logout(){
+ localStorage.removeItem("token");
+ location.reload();
+}
