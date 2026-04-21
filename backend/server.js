@@ -8,10 +8,7 @@ const jwt = require("jsonwebtoken");
 
 const app = express();
 
-/* =========================
-   CONFIG
-========================= */
-app.use(cors({ origin: "*"}));
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
@@ -32,13 +29,12 @@ db.connect(err => {
 });
 
 /* =========================
-   RESPUESTAS SEGURAS
+   RESPUESTAS
 ========================= */
 function ok(res, data = {}) {
  return res.json({ ok: true, data });
 }
-
-function fail(res, msg = "Error servidor", code = 500) {
+function fail(res, msg = "Error", code = 500) {
  return res.status(code).json({ ok: false, error: msg });
 }
 
@@ -49,15 +45,13 @@ app.post("/login", (req, res) => {
 
  const { user, pass } = req.body;
 
- if (!user || !pass) return fail(res, "Datos incompletos", 400);
-
  db.query(
   "SELECT * FROM usuarios WHERE user=? AND pass=?",
   [user, pass],
   (err, result) => {
 
    if (err) return fail(res, err.message);
-   if (result.length === 0) return fail(res, "Login incorrecto", 401);
+   if (!result.length) return fail(res, "Login incorrecto", 401);
 
    const u = result[0];
 
@@ -90,6 +84,15 @@ function verifyToken(req, res, next) {
 }
 
 /* =========================
+   SOLO ADMIN
+========================= */
+function soloAdmin(req, res, next) {
+ if (req.user.role !== "admin")
+  return fail(res, "No autorizado", 403);
+ next();
+}
+
+/* =========================
    TECNICOS
 ========================= */
 app.get("/tecnicos", verifyToken, (req, res) => {
@@ -99,9 +102,7 @@ app.get("/tecnicos", verifyToken, (req, res) => {
  });
 });
 
-app.post("/tecnicos", verifyToken, (req, res) => {
-
- if (!req.body.nombre) return fail(res, "Nombre requerido", 400);
+app.post("/tecnicos", verifyToken, soloAdmin, (req, res) => {
 
  db.query(
   "INSERT INTO tecnicos(nombre) VALUES(?)",
@@ -123,15 +124,11 @@ app.get("/proyectos", verifyToken, (req, res) => {
  });
 });
 
-app.post("/proyectos", verifyToken, (req, res) => {
-
- const { numero, sitio } = req.body;
-
- if (!numero || !sitio) return fail(res, "Campos incompletos", 400);
+app.post("/proyectos", verifyToken, soloAdmin, (req, res) => {
 
  db.query(
   "INSERT INTO proyectos(numero,sitio) VALUES(?,?)",
-  [numero, sitio],
+  [req.body.numero, req.body.sitio],
   (err, result) => {
    if (err) return fail(res, err.message);
    ok(res, { id: result.insertId });
@@ -140,7 +137,7 @@ app.post("/proyectos", verifyToken, (req, res) => {
 });
 
 /* =========================
-   INFORMES
+   MULTER
 ========================= */
 const storage = multer.diskStorage({
  destination: "uploads/",
@@ -148,9 +145,11 @@ const storage = multer.diskStorage({
   cb(null, Date.now() + "-" + file.originalname);
  }
 });
-
 const upload = multer({ storage });
 
+/* =========================
+   INFORMES
+========================= */
 app.get("/informes", verifyToken, (req, res) => {
  db.query("SELECT * FROM informes ORDER BY id DESC", (err, r) => {
   if (err) return fail(res, err.message);
@@ -160,15 +159,13 @@ app.get("/informes", verifyToken, (req, res) => {
 
 app.post("/informes", verifyToken, upload.array("fotos"), (req, res) => {
 
- const { proyecto, sitio, fecha, descripcion } = req.body;
+ const { proyecto, sitio, fecha, descripcion, personas } = req.body;
 
- if (!proyecto || !fecha || !descripcion) {
-  return fail(res, "Datos incompletos", 400);
- }
+ const fotos = req.files?.map(f => f.filename).join(",") || "";
 
  db.query(
-  "INSERT INTO informes(proyecto,sitio,fecha,descripcion) VALUES (?,?,?,?)",
-  [proyecto, sitio, fecha, descripcion],
+  "INSERT INTO informes(proyecto,sitio,fecha,descripcion,personas,fotos) VALUES (?,?,?,?,?,?)",
+  [proyecto, sitio, fecha, descripcion, personas, fotos],
   (err, result) => {
    if (err) return fail(res, err.message);
    ok(res, { id: result.insertId });
@@ -176,19 +173,34 @@ app.post("/informes", verifyToken, upload.array("fotos"), (req, res) => {
  );
 });
 
-/* =========================
-   ERROR GLOBAL
-========================= */
-app.use((err, req, res, next) => {
- console.error(err);
- res.status(500).json({ ok: false, error: "Error interno" });
+/* EDITAR */
+app.put("/informes/:id", verifyToken, (req, res) => {
+
+ const { fecha, descripcion } = req.body;
+
+ db.query(
+  "UPDATE informes SET fecha=?, descripcion=? WHERE id=?",
+  [fecha, descripcion, req.params.id],
+  (err) => {
+   if (err) return fail(res, err.message);
+   ok(res);
+  }
+ );
 });
 
-/* =========================
-   SERVER
-========================= */
+/* ELIMINAR */
+app.delete("/informes/:id", verifyToken, (req, res) => {
+
+ db.query(
+  "DELETE FROM informes WHERE id=?",
+  [req.params.id],
+  (err) => {
+   if (err) return fail(res, err.message);
+   ok(res);
+  }
+ );
+});
+
+/* ========================= */
 const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
- console.log("🚀 API running on " + PORT);
-});
+app.listen(PORT, () => console.log("🚀 API running " + PORT));
