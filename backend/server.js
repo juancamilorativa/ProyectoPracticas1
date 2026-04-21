@@ -27,8 +27,8 @@ db.connect(err => {
 });
 
 /* RESPUESTAS */
-const ok = (res, data={}) => res.json({ ok:true, data });
-const fail = (res, msg="Error", code=500)=>res.status(code).json({ok:false,error:msg});
+const ok = (res,data={})=>res.json({ok:true,data});
+const fail = (res,msg,code=500)=>res.status(code).json({ok:false,error:msg});
 
 /* LOGIN */
 app.post("/login",(req,res)=>{
@@ -49,6 +49,7 @@ function verifyToken(req,res,next){
  if(!auth) return fail(res,"No token",403);
 
  const token=auth.split(" ")[1];
+
  jwt.verify(token,process.env.JWT_SECRET,(err,dec)=>{
   if(err) return fail(res,"Token inválido",403);
   req.user=dec;
@@ -71,10 +72,25 @@ app.get("/tecnicos",verifyToken,(req,res)=>{
 });
 
 app.post("/tecnicos",verifyToken,soloAdmin,(req,res)=>{
- db.query("INSERT INTO tecnicos(nombre) VALUES(?)",[req.body.nombre],(e,r)=>{
-  if(e) return fail(res,e.message);
-  ok(res,{id:r.insertId});
+
+ const {nombre}=req.body;
+
+ db.query("SELECT * FROM tecnicos WHERE nombre=?",[nombre],(e,r)=>{
+
+  if(r.length>0)
+   return res.json({ok:false,error:"Técnico ya existe"});
+
+  db.query("INSERT INTO tecnicos(nombre) VALUES(?)",[nombre],(e)=>{
+   if(e) return fail(res,e.message);
+   ok(res);
+  });
+
  });
+});
+
+app.delete("/tecnicos/:id",verifyToken,soloAdmin,(req,res)=>{
+ db.query("DELETE FROM tecnicos WHERE id=?",[req.params.id],
+ (e)=>{if(e)return fail(res,e.message);ok(res);});
 });
 
 /* PROYECTOS */
@@ -86,10 +102,27 @@ app.get("/proyectos",verifyToken,(req,res)=>{
 });
 
 app.post("/proyectos",verifyToken,soloAdmin,(req,res)=>{
- db.query("INSERT INTO proyectos(numero,sitio) VALUES(?,?)",[req.body.numero,req.body.sitio],(e,r)=>{
-  if(e) return fail(res,e.message);
-  ok(res,{id:r.insertId});
+
+ const {numero,sitio}=req.body;
+
+ db.query("SELECT * FROM proyectos WHERE numero=?",[numero],(e,r)=>{
+
+  if(r.length>0)
+   return res.json({ok:false,error:"Proyecto ya existe"});
+
+  db.query("INSERT INTO proyectos(numero,sitio) VALUES(?,?)",
+  [numero,sitio],
+  (e)=>{
+   if(e) return fail(res,e.message);
+   ok(res);
+  });
+
  });
+});
+
+app.delete("/proyectos/:id",verifyToken,soloAdmin,(req,res)=>{
+ db.query("DELETE FROM proyectos WHERE id=?",[req.params.id],
+ (e)=>{if(e)return fail(res,e.message);ok(res);});
 });
 
 /* MULTER */
@@ -108,26 +141,30 @@ app.get("/informes",verifyToken,(req,res)=>{
 });
 
 app.post("/informes",verifyToken,upload.array("fotos"),(req,res)=>{
+
  const {proyecto,sitio,fecha,descripcion,personas}=req.body;
+
  const fotos=req.files?.map(f=>f.filename).join(",")||"";
 
- db.query("INSERT INTO informes(proyecto,sitio,fecha,descripcion,personas,fotos) VALUES (?,?,?,?,?,?)",
- [proyecto,sitio,fecha,descripcion,personas,fotos],
- (e,r)=>{
-  if(e) return fail(res,e.message);
-  ok(res,{id:r.insertId});
- });
+ db.query(
+  "INSERT INTO informes(proyecto,sitio,fecha,descripcion,personas,fotos) VALUES (?,?,?,?,?,?)",
+  [proyecto,sitio,fecha,descripcion,personas,fotos],
+  (e)=>{
+   if(e) return fail(res,e.message);
+   ok(res);
+  }
+ );
 });
 
 app.put("/informes/:id",verifyToken,(req,res)=>{
  db.query("UPDATE informes SET fecha=?,descripcion=? WHERE id=?",
  [req.body.fecha,req.body.descripcion,req.params.id],
- (e)=>{if(e) return fail(res,e.message); ok(res);});
+ (e)=>{if(e)return fail(res,e.message);ok(res);});
 });
 
-app.delete("/informes/:id",verifyToken,(req,res)=>{
+app.delete("/informes/:id",verifyToken,soloAdmin,(req,res)=>{
  db.query("DELETE FROM informes WHERE id=?",[req.params.id],
- (e)=>{if(e) return fail(res,e.message); ok(res);});
+ (e)=>{if(e)return fail(res,e.message);ok(res);});
 });
 
 app.listen(process.env.PORT||3000,()=>console.log("🚀 API running"));
