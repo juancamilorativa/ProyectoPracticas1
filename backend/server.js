@@ -12,7 +12,7 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
-/* ================= MYSQL ================= */
+/* MYSQL */
 const db = mysql.createConnection({
  host: process.env.DB_HOST,
  user: process.env.DB_USER,
@@ -26,11 +26,11 @@ db.connect(err => {
  else console.log("✅ MySQL conectado");
 });
 
-/* ================= RESP ================= */
+/* RESP */
 const ok = (res,data=[])=>res.json({ok:true,data});
 const fail = (res,msg,code=500)=>res.status(code).json({ok:false,error:msg});
 
-/* ================= LOGIN ================= */
+/* LOGIN */
 app.post("/login",(req,res)=>{
  const {user,pass}=req.body;
 
@@ -48,7 +48,7 @@ app.post("/login",(req,res)=>{
  });
 });
 
-/* ================= TOKEN ================= */
+/* TOKEN */
 function verifyToken(req,res,next){
  const auth=req.headers["authorization"];
  if(!auth) return fail(res,"No token",403);
@@ -67,23 +67,18 @@ function soloAdmin(req,res,next){
  next();
 }
 
-/* ================= TECNICOS ================= */
+/* TECNICOS */
 app.get("/tecnicos",verifyToken,(req,res)=>{
- db.query("SELECT * FROM tecnicos",(e,r)=>{
-  if(e) return fail(res,e.message);
-  ok(res,r);
- });
+ db.query("SELECT * FROM tecnicos",(e,r)=>ok(res,r));
 });
 
 app.post("/tecnicos",verifyToken,soloAdmin,(req,res)=>{
  const {nombre}=req.body;
 
  db.query("SELECT * FROM tecnicos WHERE nombre=?",[nombre],(e,r)=>{
-  if(r.length>0) return ok(res,{error:"Ya existe"});
+  if(r.length>0) return fail(res,"Ya existe",400);
 
-  db.query("INSERT INTO tecnicos(nombre) VALUES(?)",[nombre],()=>{
-   ok(res);
-  });
+  db.query("INSERT INTO tecnicos(nombre) VALUES(?)",[nombre],()=>ok(res));
  });
 });
 
@@ -91,7 +86,7 @@ app.delete("/tecnicos/:id",verifyToken,soloAdmin,(req,res)=>{
  db.query("DELETE FROM tecnicos WHERE id=?",[req.params.id],()=>ok(res));
 });
 
-/* ================= PROYECTOS ================= */
+/* PROYECTOS */
 app.get("/proyectos",verifyToken,(req,res)=>{
  db.query("SELECT * FROM proyectos",(e,r)=>ok(res,r));
 });
@@ -100,7 +95,7 @@ app.post("/proyectos",verifyToken,soloAdmin,(req,res)=>{
  const {numero,sitio}=req.body;
 
  db.query("SELECT * FROM proyectos WHERE numero=?",[numero],(e,r)=>{
-  if(r.length>0) return ok(res,{error:"Ya existe"});
+  if(r.length>0) return fail(res,"Proyecto ya existe",400);
 
   db.query("INSERT INTO proyectos(numero,sitio) VALUES(?,?)",
   [numero,sitio],
@@ -112,49 +107,71 @@ app.delete("/proyectos/:id",verifyToken,soloAdmin,(req,res)=>{
  db.query("DELETE FROM proyectos WHERE id=?",[req.params.id],()=>ok(res));
 });
 
-/* ================= MULTER ================= */
+/* MULTER */
 const storage = multer.diskStorage({
  destination:"uploads/",
  filename:(req,file,cb)=>cb(null,Date.now()+"-"+file.originalname)
 });
 const upload = multer({storage});
 
-/* ================= INFORMES ================= */
-app.get("/informes",verifyToken,(req,res)=>{
-
- const sql = `
- SELECT i.*,
- GROUP_CONCAT(t.nombre SEPARATOR ', ') AS responsables
- FROM informes i
- LEFT JOIN tecnicos t 
- ON JSON_CONTAINS(i.personas, CAST(t.id AS JSON))
- GROUP BY i.id
- ORDER BY i.fecha DESC
- `;
-
- db.query(sql,(e,r)=>{
-  if(e) return fail(res,e.message);
-  ok(res,r);
- });
-});
-
+/* INFORMES */
 app.post("/informes",verifyToken,upload.array("fotos"),(req,res)=>{
 
- const {proyecto,sitio,descripcion,personas}=req.body;
-
+ const {proyecto,sitio,descripcion}=req.body;
  const fecha = new Date();
  const fotos = req.files?.map(f=>f.filename).join(",") || "";
 
  db.query(
-  "INSERT INTO informes(proyecto,sitio,fecha,descripcion,personas,fotos) VALUES (?,?,?,?,?,?)",
-  [proyecto,sitio,fecha,descripcion,personas,fotos],
-  ()=>ok(res)
+  "INSERT INTO informes(proyecto,sitio,fecha,descripcion,fotos) VALUES (?,?,?,?,?)",
+  [proyecto,sitio,fecha,descripcion,fotos],
+  (err,result)=>{
+
+   if(err) return fail(res,err.message);
+
+   const informeId = result.insertId;
+
+   let personas = [];
+   try{
+    personas = JSON.parse(req.body.personas || "[]");
+   }catch{
+    personas = [];
+   }
+
+   if(personas.length === 0) return ok(res);
+
+   const values = personas.map(p=>[informeId,p]);
+
+   db.query(
+    "INSERT INTO informe_tecnicos (informe_id, tecnico_id) VALUES ?",
+    [values],
+    ()=>ok(res)
+   );
+  }
  );
 });
 
+app.get("/informes",verifyToken,(req,res)=>{
+
+ const sql = `
+ SELECT 
+  i.*,
+  GROUP_CONCAT(t.nombre SEPARATOR ', ') AS responsables
+ FROM informes i
+ LEFT JOIN informe_tecnicos it ON i.id = it.informe_id
+ LEFT JOIN tecnicos t ON it.tecnico_id = t.id
+ GROUP BY i.id
+ ORDER BY i.fecha DESC
+ `;
+
+ db.query(sql,(err,r)=>{
+  if(err) return fail(res,err.message);
+  ok(res,r);
+ });
+});
+
 app.put("/informes/:id",verifyToken,(req,res)=>{
- db.query("UPDATE informes SET fecha=?,descripcion=? WHERE id=?",
- [req.body.fecha,req.body.descripcion,req.params.id],
+ db.query("UPDATE informes SET descripcion=? WHERE id=?",
+ [req.body.descripcion,req.params.id],
  ()=>ok(res));
 });
 
