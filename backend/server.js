@@ -5,6 +5,7 @@ const mysql = require("mysql2");
 const cors = require("cors");
 const multer = require("multer");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 const app = express();
 
@@ -12,7 +13,7 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
-/* MYSQL */
+/* ================== MYSQL ================== */
 const db = mysql.createConnection({
  host: process.env.DB_HOST,
  user: process.env.DB_USER,
@@ -26,29 +27,59 @@ db.connect(err => {
  else console.log("✅ MySQL conectado");
 });
 
-/* RESP */
+/* ================== RESP ================== */
 const ok = (res,data=[])=>res.json({ok:true,data});
 const fail = (res,msg,code=500)=>res.status(code).json({ok:false,error:msg});
 
-/* LOGIN */
+/* ================== REGISTER ================== */
+app.post("/register", async (req,res)=>{
+ const {user,pass,role} = req.body;
+
+ if(!user || !pass) return fail(res,"Faltan datos",400);
+
+ try{
+  const hash = await bcrypt.hash(pass,10);
+
+  db.query(
+   "INSERT INTO usuarios(user, pass, role) VALUES (?,?,?)",
+   [user,hash,role || "user"],
+   (err)=>{
+    if(err) return fail(res,err.message);
+    ok(res,"Usuario creado");
+   }
+  );
+ }catch(e){
+  fail(res,e.message);
+ }
+});
+
+/* ================== LOGIN ================== */
 app.post("/login",(req,res)=>{
  const {user,pass}=req.body;
 
- db.query("SELECT * FROM usuarios WHERE user=? AND pass=?",[user,pass],(err,r)=>{
+ db.query("SELECT * FROM usuarios WHERE user=?",[user], async (err,r)=>{
   if(err) return fail(res,err.message);
   if(!r.length) return fail(res,"Login incorrecto",401);
 
+  const usuario = r[0];
+
+  const passwordCorrecta = await bcrypt.compare(pass, usuario.pass);
+
+  if(!passwordCorrecta){
+   return fail(res,"Login incorrecto",401);
+  }
+
   const token = jwt.sign(
-   {id:r[0].id,role:r[0].role},
+   {id:usuario.id,role:usuario.role},
    process.env.JWT_SECRET,
    {expiresIn:"8h"}
   );
 
-  ok(res,{token,role:r[0].role});
+  ok(res,{token,role:usuario.role});
  });
 });
 
-/* TOKEN */
+/* ================== TOKEN ================== */
 function verifyToken(req,res,next){
  const auth=req.headers["authorization"];
  if(!auth) return fail(res,"No token",403);
@@ -67,7 +98,7 @@ function soloAdmin(req,res,next){
  next();
 }
 
-/* TECNICOS */
+/* ================== TECNICOS ================== */
 app.get("/tecnicos",verifyToken,(req,res)=>{
  db.query("SELECT * FROM tecnicos",(e,r)=>ok(res,r));
 });
@@ -86,7 +117,7 @@ app.delete("/tecnicos/:id",verifyToken,soloAdmin,(req,res)=>{
  db.query("DELETE FROM tecnicos WHERE id=?",[req.params.id],()=>ok(res));
 });
 
-/* PROYECTOS */
+/* ================== PROYECTOS ================== */
 app.get("/proyectos",verifyToken,(req,res)=>{
  db.query("SELECT * FROM proyectos",(e,r)=>ok(res,r));
 });
@@ -97,9 +128,11 @@ app.post("/proyectos",verifyToken,soloAdmin,(req,res)=>{
  db.query("SELECT * FROM proyectos WHERE numero=?",[numero],(e,r)=>{
   if(r.length>0) return fail(res,"Proyecto ya existe",400);
 
-  db.query("INSERT INTO proyectos(numero,sitio) VALUES(?,?)",
-  [numero,sitio],
-  ()=>ok(res));
+  db.query(
+   "INSERT INTO proyectos(numero,sitio) VALUES(?,?)",
+   [numero,sitio],
+   ()=>ok(res)
+  );
  });
 });
 
@@ -107,14 +140,14 @@ app.delete("/proyectos/:id",verifyToken,soloAdmin,(req,res)=>{
  db.query("DELETE FROM proyectos WHERE id=?",[req.params.id],()=>ok(res));
 });
 
-/* MULTER */
+/* ================== MULTER ================== */
 const storage = multer.diskStorage({
  destination:"uploads/",
  filename:(req,file,cb)=>cb(null,Date.now()+"-"+file.originalname)
 });
 const upload = multer({storage});
 
-/* INFORMES */
+/* ================== INFORMES ================== */
 app.post("/informes",verifyToken,upload.array("fotos"),(req,res)=>{
 
  const {proyecto,sitio,descripcion}=req.body;
@@ -170,13 +203,18 @@ app.get("/informes",verifyToken,(req,res)=>{
 });
 
 app.put("/informes/:id",verifyToken,(req,res)=>{
- db.query("UPDATE informes SET descripcion=? WHERE id=?",
- [req.body.descripcion,req.params.id],
- ()=>ok(res));
+ db.query(
+  "UPDATE informes SET descripcion=? WHERE id=?",
+  [req.body.descripcion,req.params.id],
+  ()=>ok(res)
+ );
 });
 
 app.delete("/informes/:id",verifyToken,soloAdmin,(req,res)=>{
  db.query("DELETE FROM informes WHERE id=?",[req.params.id],()=>ok(res));
 });
 
-app.listen(process.env.PORT||3000,()=>console.log("🚀 API running"));
+/* ================== SERVER ================== */
+app.listen(process.env.PORT||3000,()=>{
+ console.log("🚀 API running");
+});
