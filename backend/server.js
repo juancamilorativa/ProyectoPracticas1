@@ -98,6 +98,13 @@ function soloAdmin(req,res,next){
  next();
 }
 
+app.get("/usuarios", verifyToken, soloAdmin, (req,res)=>{
+ db.query("SELECT id, user, role FROM usuarios",(err,r)=>{
+  if(err) return fail(res,err.message);
+  ok(res,r);
+ });
+});
+
 /* ================== TECNICOS ================== */
 app.get("/tecnicos",verifyToken,(req,res)=>{
  db.query("SELECT * FROM tecnicos",(e,r)=>ok(res,r));
