@@ -15,9 +15,9 @@ app.use("/proyectos", require("./routes/proyectosRoutes"));
 app.use("/informes", require("./routes/informesRoutes"));
 
 app.get("/", (req, res) => {
-  res.send("🚀 API funcionando");
+  res.send(" API funcionando");
 });
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log("🚀 API running");
+  console.log(" API running");
 });
