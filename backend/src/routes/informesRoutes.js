@@ -9,5 +9,7 @@ const {
 
 router.get("/", verifyToken, getInformes);
 router.get("/buscar", verifyToken, buscarInformes);
+router.post("/", controller.crearInforme);
+
 
 module.exports = router;

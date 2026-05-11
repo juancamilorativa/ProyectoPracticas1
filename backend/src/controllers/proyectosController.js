@@ -1,28 +1,179 @@
 const db = require("../config/db");
 
-exports.getProyectos = (req, res) => {
-  db.query("SELECT * FROM proyectos", (e, r) =>
-    res.json({ ok: true, data: r })
-  );
-};
+/* LISTAR */
+exports.getInformes = (req, res) => {
 
-exports.addProyecto = (req, res) => {
-  const { numero, sitio } = req.body;
+  const sql = `
+    SELECT 
+      i.*,
+      GROUP_CONCAT(t.nombre SEPARATOR ', ') AS responsables
+    FROM informes i
+    LEFT JOIN informe_tecnicos it ON i.id = it.informe_id
+    LEFT JOIN tecnicos t ON it.tecnico_id = t.id
+    GROUP BY i.id
+    ORDER BY i.fecha DESC
+  `;
 
-  db.query("SELECT * FROM proyectos WHERE numero=?", [numero], (e, r) => {
-    if (r.length > 0)
-      return res.json({ ok: false, error: "Proyecto ya existe" });
+  db.query(sql, (err, r) => {
 
-    db.query(
-      "INSERT INTO proyectos(numero,sitio) VALUES(?,?)",
-      [numero, sitio],
-      () => res.json({ ok: true })
-    );
+    if (err) {
+      return res.json({
+        ok: false,
+        error: err.message
+      });
+    }
+
+    res.json({
+      ok: true,
+      data: r
+    });
+
   });
+
 };
 
-exports.deleteProyecto = (req, res) => {
-  db.query("DELETE FROM proyectos WHERE id=?", [req.params.id], () =>
-    res.json({ ok: true })
+
+/* CREAR */
+exports.crearInforme = (req, res) => {
+
+  const {
+    proyecto,
+    sitio,
+    descripcion,
+    fecha
+  } = req.body;
+
+  if (!proyecto || !sitio || !descripcion || !fecha) {
+
+    return res.json({
+      ok: false,
+      mensaje: "Todos los campos son obligatorios"
+    });
+
+  }
+
+  const sql = `
+    INSERT INTO informes
+    (proyecto, sitio, descripcion, fecha)
+    VALUES (?, ?, ?, ?)
+  `;
+
+  db.query(
+    sql,
+    [proyecto, sitio, descripcion, fecha],
+    (err, result) => {
+
+      if (err) {
+
+        return res.json({
+          ok: false,
+          error: err.message
+        });
+
+      }
+
+      res.json({
+        ok: true,
+        mensaje: "Informe creado correctamente",
+        id: result.insertId
+      });
+
+    }
   );
+
+};
+
+
+/* BUSQUEDA AVANZADA */
+exports.buscarInformes = (req, res) => {
+
+  let {
+    q,
+    fechaInicio,
+    fechaFin,
+    tecnico,
+    page = 1,
+    limit = 10
+  } = req.query;
+
+  page = parseInt(page);
+  limit = parseInt(limit);
+
+  const offset = (page - 1) * limit;
+
+  let condiciones = [];
+  let valores = [];
+
+  if (q) {
+
+    condiciones.push(
+      "(i.proyecto LIKE ? OR i.sitio LIKE ? OR i.descripcion LIKE ?)"
+    );
+
+    valores.push(
+      `%${q}%`,
+      `%${q}%`,
+      `%${q}%`
+    );
+
+  }
+
+  if (fechaInicio && fechaFin) {
+
+    condiciones.push("i.fecha BETWEEN ? AND ?");
+
+    valores.push(
+      fechaInicio,
+      fechaFin
+    );
+
+  }
+
+  if (tecnico) {
+
+    condiciones.push("t.id = ?");
+
+    valores.push(tecnico);
+
+  }
+
+  let where = condiciones.length
+    ? "WHERE " + condiciones.join(" AND ")
+    : "";
+
+  const sql = `
+    SELECT 
+      i.*,
+      GROUP_CONCAT(t.nombre SEPARATOR ', ') AS responsables
+    FROM informes i
+    LEFT JOIN informe_tecnicos it ON i.id = it.informe_id
+    LEFT JOIN tecnicos t ON it.tecnico_id = t.id
+    ${where}
+    GROUP BY i.id
+    ORDER BY i.fecha DESC
+    LIMIT ? OFFSET ?
+  `;
+
+  valores.push(limit, offset);
+
+  db.query(sql, valores, (err, results) => {
+
+    if (err) {
+
+      return res.json({
+        ok: false,
+        error: err.message
+      });
+
+    }
+
+    res.json({
+      ok: true,
+      page,
+      limit,
+      data: results
+    });
+
+  });
+
 };
