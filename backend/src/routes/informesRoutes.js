@@ -1,15 +1,19 @@
 const express = require("express");
 const router = express.Router();
 
-const { verifyToken } = require("../middlewares/authMiddleware");
-const {
-  getInformes,
-  buscarInformes
-} = require("../controllers/informesController");
+const controller = require("../controllers/informesController");
 
-router.get("/", verifyToken, getInformes);
-router.get("/buscar", verifyToken, buscarInformes);
+
+/* LISTAR INFORMES */
+router.get("/", controller.getInformes);
+
+
+/* CREAR INFORME */
 router.post("/", controller.crearInforme);
+
+
+/* BUSQUEDA AVANZADA */
+router.get("/buscar", controller.buscarInformes);
 
 
 module.exports = router;

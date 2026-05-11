@@ -1,20 +1,12 @@
 const db = require("../config/db");
 
+
 /* LISTAR */
-exports.getInformes = (req, res) => {
+exports.getProyectos = (req, res) => {
 
-  const sql = `
-    SELECT 
-      i.*,
-      GROUP_CONCAT(t.nombre SEPARATOR ', ') AS responsables
-    FROM informes i
-    LEFT JOIN informe_tecnicos it ON i.id = it.informe_id
-    LEFT JOIN tecnicos t ON it.tecnico_id = t.id
-    GROUP BY i.id
-    ORDER BY i.fecha DESC
-  `;
+  const sql = "SELECT * FROM proyectos ORDER BY id DESC";
 
-  db.query(sql, (err, r) => {
+  db.query(sql, (err, results) => {
 
     if (err) {
       return res.json({
@@ -25,7 +17,7 @@ exports.getInformes = (req, res) => {
 
     res.json({
       ok: true,
-      data: r
+      data: results
     });
 
   });
@@ -34,129 +26,25 @@ exports.getInformes = (req, res) => {
 
 
 /* CREAR */
-exports.crearInforme = (req, res) => {
+exports.addProyecto = (req, res) => {
 
-  const {
-    proyecto,
-    sitio,
-    descripcion,
-    fecha
-  } = req.body;
+  const { nombre } = req.body;
 
-  if (!proyecto || !sitio || !descripcion || !fecha) {
+  if (!nombre) {
 
     return res.json({
       ok: false,
-      mensaje: "Todos los campos son obligatorios"
+      mensaje: "El nombre es obligatorio"
     });
 
   }
 
   const sql = `
-    INSERT INTO informes
-    (proyecto, sitio, descripcion, fecha)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO proyectos(nombre)
+    VALUES(?)
   `;
 
-  db.query(
-    sql,
-    [proyecto, sitio, descripcion, fecha],
-    (err, result) => {
-
-      if (err) {
-
-        return res.json({
-          ok: false,
-          error: err.message
-        });
-
-      }
-
-      res.json({
-        ok: true,
-        mensaje: "Informe creado correctamente",
-        id: result.insertId
-      });
-
-    }
-  );
-
-};
-
-
-/* BUSQUEDA AVANZADA */
-exports.buscarInformes = (req, res) => {
-
-  let {
-    q,
-    fechaInicio,
-    fechaFin,
-    tecnico,
-    page = 1,
-    limit = 10
-  } = req.query;
-
-  page = parseInt(page);
-  limit = parseInt(limit);
-
-  const offset = (page - 1) * limit;
-
-  let condiciones = [];
-  let valores = [];
-
-  if (q) {
-
-    condiciones.push(
-      "(i.proyecto LIKE ? OR i.sitio LIKE ? OR i.descripcion LIKE ?)"
-    );
-
-    valores.push(
-      `%${q}%`,
-      `%${q}%`,
-      `%${q}%`
-    );
-
-  }
-
-  if (fechaInicio && fechaFin) {
-
-    condiciones.push("i.fecha BETWEEN ? AND ?");
-
-    valores.push(
-      fechaInicio,
-      fechaFin
-    );
-
-  }
-
-  if (tecnico) {
-
-    condiciones.push("t.id = ?");
-
-    valores.push(tecnico);
-
-  }
-
-  let where = condiciones.length
-    ? "WHERE " + condiciones.join(" AND ")
-    : "";
-
-  const sql = `
-    SELECT 
-      i.*,
-      GROUP_CONCAT(t.nombre SEPARATOR ', ') AS responsables
-    FROM informes i
-    LEFT JOIN informe_tecnicos it ON i.id = it.informe_id
-    LEFT JOIN tecnicos t ON it.tecnico_id = t.id
-    ${where}
-    GROUP BY i.id
-    ORDER BY i.fecha DESC
-    LIMIT ? OFFSET ?
-  `;
-
-  valores.push(limit, offset);
-
-  db.query(sql, valores, (err, results) => {
+  db.query(sql, [nombre], (err, result) => {
 
     if (err) {
 
@@ -169,9 +57,39 @@ exports.buscarInformes = (req, res) => {
 
     res.json({
       ok: true,
-      page,
-      limit,
-      data: results
+      mensaje: "Proyecto agregado",
+      id: result.insertId
+    });
+
+  });
+
+};
+
+
+/* ELIMINAR */
+exports.deleteProyecto = (req, res) => {
+
+  const { id } = req.params;
+
+  const sql = `
+    DELETE FROM proyectos
+    WHERE id = ?
+  `;
+
+  db.query(sql, [id], (err) => {
+
+    if (err) {
+
+      return res.json({
+        ok: false,
+        error: err.message
+      });
+
+    }
+
+    res.json({
+      ok: true,
+      mensaje: "Proyecto eliminado"
     });
 
   });

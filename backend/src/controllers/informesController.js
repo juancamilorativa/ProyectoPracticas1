@@ -80,3 +80,52 @@ exports.buscarInformes = (req, res) => {
     });
   });
 };
+/* CREAR INFORME */
+exports.crearInforme = (req, res) => {
+
+  const {
+    proyecto,
+    sitio,
+    descripcion,
+    fecha
+  } = req.body;
+
+  if (!proyecto || !sitio || !descripcion || !fecha) {
+
+    return res.json({
+      ok: false,
+      mensaje: "Todos los campos son obligatorios"
+    });
+
+  }
+
+  const sql = `
+    INSERT INTO informes
+    (proyecto, sitio, descripcion, fecha)
+    VALUES (?, ?, ?, ?)
+  `;
+
+  db.query(
+    sql,
+    [proyecto, sitio, descripcion, fecha],
+    (err, result) => {
+
+      if (err) {
+
+        return res.json({
+          ok: false,
+          error: err.message
+        });
+
+      }
+
+      res.json({
+        ok: true,
+        mensaje: "Informe creado correctamente",
+        id: result.insertId
+      });
+
+    }
+  );
+
+};
