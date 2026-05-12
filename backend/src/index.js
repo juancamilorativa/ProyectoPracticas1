@@ -68,3 +68,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 
 });
+app.get("/test", (req, res) => {
+  console.log("🔥 TEST LLEGÓ");
+  res.send("OK");
+});
