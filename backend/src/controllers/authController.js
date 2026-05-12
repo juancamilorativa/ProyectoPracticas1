@@ -10,11 +10,18 @@ const jwt = require("jsonwebtoken");
  exports.register = async (req, res) => {
   try {
 
-    const { user, pass, rol } = req.body;
+    console.log("🔥 BODY RECIBIDO:", req.body);
+
+    const { user, pass, rol } = req.body || {};
 
     if (!user || !pass) {
-      return res.status(400).json({ ok: false, error: "Faltan datos" });
+      return res.status(400).json({
+        ok: false,
+        error: "Faltan datos"
+      });
     }
+
+  
 
     const existe = await User.findOne({ user });
 
