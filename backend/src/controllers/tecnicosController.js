@@ -1,23 +1,130 @@
-const db = require("../config/db");
+const Tecnico = require("../models/Tecnico");
 
-exports.getTecnicos = (req, res) => {
-  db.query("SELECT * FROM tecnicos", (e, r) => res.json({ ok: true, data: r }));
+
+/* LISTAR */
+exports.getTecnicos = async (req, res) => {
+
+  try {
+
+    const tecnicos = await Tecnico.find()
+      .sort({ nombre: 1 });
+
+    res.json({
+
+      ok: true,
+
+      data: tecnicos
+
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+
+      ok: false,
+
+      error: error.message
+
+    });
+
+  }
+
 };
 
-exports.addTecnico = (req, res) => {
-  const { nombre } = req.body;
 
-  db.query("SELECT * FROM tecnicos WHERE nombre=?", [nombre], (e, r) => {
-    if (r.length > 0) return res.json({ ok: false, error: "Ya existe" });
+/* CREAR */
+exports.addTecnico = async (req, res) => {
 
-    db.query("INSERT INTO tecnicos(nombre) VALUES(?)", [nombre], () =>
-      res.json({ ok: true })
-    );
-  });
+  try {
+
+    const { nombre } = req.body;
+
+    if (!nombre) {
+
+      return res.status(400).json({
+
+        ok: false,
+
+        error: "El nombre es obligatorio"
+
+      });
+
+    }
+
+    /* VALIDAR EXISTE */
+    const existe = await Tecnico.findOne({ nombre });
+
+    if (existe) {
+
+      return res.status(400).json({
+
+        ok: false,
+
+        error: "Ya existe"
+
+      });
+
+    }
+
+    /* CREAR */
+    const nuevoTecnico = new Tecnico({
+
+      nombre
+
+    });
+
+    await nuevoTecnico.save();
+
+    res.json({
+
+      ok: true,
+
+      data: nuevoTecnico
+
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+
+      ok: false,
+
+      error: error.message
+
+    });
+
+  }
+
 };
 
-exports.deleteTecnico = (req, res) => {
-  db.query("DELETE FROM tecnicos WHERE id=?", [req.params.id], () =>
-    res.json({ ok: true })
-  );
+
+/* ELIMINAR */
+exports.deleteTecnico = async (req, res) => {
+
+  try {
+
+    const { id } = req.params;
+
+    await Tecnico.findByIdAndDelete(id);
+
+    res.json({
+
+      ok: true,
+
+      mensaje: "Técnico eliminado"
+
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+
+      ok: false,
+
+      error: error.message
+
+    });
+
+  }
+
 };

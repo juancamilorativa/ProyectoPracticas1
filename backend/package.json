@@ -4,9 +4,8 @@
   "description": "Sistema con Node y MySQL",
   "main": "src/index.js",
   "scripts": {
-      "dev": "nodemon src/index.js",
+    "dev": "nodemon src/index.js",
     "start": "node src/index.js"
-    
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -14,8 +13,8 @@
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
     "jsonwebtoken": "^9.0.3",
-    "multer": "^1.4.5-lts.1",
-    "mysql2": "^3.22.1"
+    "mongoose": "^9.6.2",
+    "multer": "^1.4.5-lts.1"
   },
   "keywords": [],
   "author": "",

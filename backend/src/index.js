@@ -1,23 +1,70 @@
 require("dotenv").config();
 
 const express = require("express");
+
+const mongoose = require("mongoose");
+
 const cors = require("cors");
+
+const path = require("path");
+
+/* RUTAS */
+const authRoutes = require("./routes/authRoutes");
+
+const informesRoutes = require("./routes/informesRoutes");
+
+const proyectosRoutes = require("./routes/proyectosRoutes");
+
+const tecnicosRoutes = require("./routes/tecnicosRoutes");
 
 const app = express();
 
-app.use(cors({ origin: "*" }));
+/* MIDDLEWARES */
+app.use(cors());
+
 app.use(express.json());
-app.use("/uploads", express.static("uploads"));
 
-app.use("/", require("./routes/authRoutes"));
-app.use("/tecnicos", require("./routes/tecnicosRoutes"));
-app.use("/proyectos", require("./routes/proyectosRoutes"));
-app.use("/informes", require("./routes/informesRoutes"));
+app.use(express.urlencoded({ extended: true }));
 
+/* CARPETA PUBLICA PARA ARCHIVOS */
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+/* CONEXION MONGO ATLAS */
+mongoose.connect(process.env.MONGO_URI)
+
+  .then(() => {
+
+    console.log("✅ Mongo Atlas conectado");
+
+  })
+
+  .catch((error) => {
+
+    console.log("❌ Error MongoDB:", error);
+
+  });
+
+/* RUTAS API */
+app.use("/auth", authRoutes);
+
+app.use("/informes", informesRoutes);
+
+app.use("/proyectos", proyectosRoutes);
+
+app.use("/tecnicos", tecnicosRoutes);
+
+/* RUTA PRINCIPAL */
 app.get("/", (req, res) => {
-  res.send(" API funcionando");
+
+  res.send("API running");
+
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log(" API running");
+/* PUERTO */
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+
 });

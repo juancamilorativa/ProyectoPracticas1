@@ -1,97 +1,89 @@
-const db = require("../config/db");
-
+const Proyecto = require("../models/Proyecto");
 
 /* LISTAR */
-exports.getProyectos = (req, res) => {
+exports.getProyectos = async (req, res) => {
 
-  const sql = "SELECT * FROM proyectos ORDER BY id DESC";
+  try {
 
-  db.query(sql, (err, results) => {
-
-    if (err) {
-      return res.json({
-        ok: false,
-        error: err.message
-      });
-    }
+    const proyectos = await Proyecto.find()
+      .sort({ _id: -1 });
 
     res.json({
       ok: true,
-      data: results
+      data: proyectos
     });
 
-  });
+  } catch (error) {
 
-};
-
-
-/* CREAR */
-exports.addProyecto = (req, res) => {
-
-  const { nombre } = req.body;
-
-  if (!nombre) {
-
-    return res.json({
+    res.status(500).json({
       ok: false,
-      mensaje: "El nombre es obligatorio"
+      error: error.message
     });
 
   }
 
-  const sql = `
-    INSERT INTO proyectos(nombre)
-    VALUES(?)
-  `;
+};
 
-  db.query(sql, [nombre], (err, result) => {
+/* CREAR */
+exports.addProyecto = async (req, res) => {
 
-    if (err) {
+  try {
 
-      return res.json({
+    const { nombre } = req.body;
+
+    if (!nombre) {
+
+      return res.status(400).json({
         ok: false,
-        error: err.message
+        mensaje: "El nombre es obligatorio"
       });
 
     }
+
+    const nuevoProyecto = new Proyecto({
+      nombre
+    });
+
+    await nuevoProyecto.save();
 
     res.json({
       ok: true,
       mensaje: "Proyecto agregado",
-      id: result.insertId
+      data: nuevoProyecto
     });
 
-  });
+  } catch (error) {
+
+    res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+
+  }
 
 };
 
-
 /* ELIMINAR */
-exports.deleteProyecto = (req, res) => {
+exports.deleteProyecto = async (req, res) => {
 
-  const { id } = req.params;
+  try {
 
-  const sql = `
-    DELETE FROM proyectos
-    WHERE id = ?
-  `;
+    const { id } = req.params;
 
-  db.query(sql, [id], (err) => {
-
-    if (err) {
-
-      return res.json({
-        ok: false,
-        error: err.message
-      });
-
-    }
+    await Proyecto.findByIdAndDelete(id);
 
     res.json({
       ok: true,
       mensaje: "Proyecto eliminado"
     });
 
-  });
+  } catch (error) {
+
+    res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+
+  }
 
 };

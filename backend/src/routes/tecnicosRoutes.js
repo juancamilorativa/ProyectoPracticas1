@@ -1,15 +1,13 @@
 const express = require("express");
+
 const router = express.Router();
 
-const { verifyToken, soloAdmin } = require("../middlewares/authMiddleware");
-const {
-  getTecnicos,
-  addTecnico,
-  deleteTecnico
-} = require("../controllers/tecnicosController");
+const tecnicoController = require("../controllers/tecnicosController");
 
-router.get("/", verifyToken, getTecnicos);
-router.post("/", verifyToken, soloAdmin, addTecnico);
-router.delete("/:id", verifyToken, soloAdmin, deleteTecnico);
+router.get("/", tecnicoController.getTecnicos);
+
+router.post("/", tecnicoController.addTecnico);
+
+router.delete("/:id", tecnicoController.deleteTecnico);
 
 module.exports = router;

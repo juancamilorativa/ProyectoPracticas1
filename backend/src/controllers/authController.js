@@ -1,50 +1,134 @@
-const db = require("../config/db");
+const User = require("../models/User");
+
 const bcrypt = require("bcrypt");
+
 const jwt = require("jsonwebtoken");
 
+/* REGISTER */
 exports.register = async (req, res) => {
-  const { user, pass, role } = req.body;
-
-  if (!user || !pass) {
-    return res.status(400).json({ ok: false, error: "Faltan datos" });
-  }
 
   try {
+
+    const { user, pass, role } = req.body;
+
+    if (!user || !pass) {
+
+      return res.status(400).json({
+        ok: false,
+        error: "Faltan datos"
+      });
+
+    }
+
+    /* VALIDAR SI YA EXISTE */
+    const existe = await User.findOne({ user });
+
+    if (existe) {
+
+      return res.status(400).json({
+        ok: false,
+        error: "El usuario ya existe"
+      });
+
+    }
+
+    /* ENCRIPTAR PASSWORD */
     const hash = await bcrypt.hash(pass, 10);
 
-    db.query(
-      "INSERT INTO usuarios(user, pass, role) VALUES (?,?,?)",
-      [user, hash, role || "user"],
-      err => {
-        if (err) return res.json({ ok: false, error: err.message });
-        res.json({ ok: true, data: "Usuario creado" });
-      }
-    );
-  } catch (e) {
-    res.json({ ok: false, error: e.message });
+    /* CREAR USUARIO */
+    const nuevoUsuario = new User({
+
+      user,
+      pass: hash,
+      role: role || "user"
+
+    });
+
+    await nuevoUsuario.save();
+
+    res.json({
+      ok: true,
+      data: "Usuario creado"
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+
   }
+
 };
 
-exports.login = (req, res) => {
-  const { user, pass } = req.body;
+/* LOGIN */
+exports.login = async (req, res) => {
 
-  db.query("SELECT * FROM usuarios WHERE user=?", [user], async (err, r) => {
-    if (err) return res.json({ ok: false, error: err.message });
-    if (!r.length) return res.status(401).json({ ok: false, error: "Login incorrecto" });
+  try {
 
-    const usuario = r[0];
+    const { user, pass } = req.body;
+
+    /* BUSCAR USUARIO */
+    const usuario = await User.findOne({ user });
+
+    if (!usuario) {
+
+      return res.status(401).json({
+        ok: false,
+        error: "Login incorrecto"
+      });
+
+    }
+
+    /* COMPARAR PASSWORD */
     const valid = await bcrypt.compare(pass, usuario.pass);
 
     if (!valid) {
-      return res.status(401).json({ ok: false, error: "Login incorrecto" });
+
+      return res.status(401).json({
+        ok: false,
+        error: "Login incorrecto"
+      });
+
     }
 
+    /* TOKEN */
     const token = jwt.sign(
-      { id: usuario.id, role: usuario.role },
+
+      {
+        id: usuario._id,
+        role: usuario.role
+      },
+
       process.env.JWT_SECRET,
-      { expiresIn: "8h" }
+
+      {
+        expiresIn: "8h"
+      }
+
     );
 
-    res.json({ ok: true, data: { token, role: usuario.role } });
-  });
+    res.json({
+
+      ok: true,
+
+      data: {
+
+        token,
+        role: usuario.role
+
+      }
+
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+
+  }
+
 };

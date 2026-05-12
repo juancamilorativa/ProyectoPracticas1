@@ -1,16 +1,14 @@
-const mysql = require("mysql2");
+const mongoose = require("mongoose");
 
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT
-});
+const conectarDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
 
-db.connect(err => {
-  if (err) console.log("❌ DB error:", err);
-  else console.log("✅ MySQL conectado");
-});
+    console.log("✅ Mongo Atlas conectado");
+  } catch (error) {
+    console.log("❌ Error Mongo:", error);
+    process.exit(1);
+  }
+};
 
-module.exports = db;
+module.exports = conectarDB;

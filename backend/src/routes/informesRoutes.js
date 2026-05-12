@@ -1,19 +1,20 @@
 const express = require("express");
+
 const router = express.Router();
 
-const controller = require("../controllers/informesController");
+const informeController = require("../controllers/informesController");
 
+const upload = require("../middlewares/upload");
 
-/* LISTAR INFORMES */
-router.get("/", controller.getInformes);
+/* MULTIPLES ARCHIVOS */
+router.post(
 
+  "/",
 
-/* CREAR INFORME */
-router.post("/", controller.crearInforme);
+  upload.array("archivos", 20),
 
+  informeController.crearInforme
 
-/* BUSQUEDA AVANZADA */
-router.get("/buscar", controller.buscarInformes);
-
+);
 
 module.exports = router;
