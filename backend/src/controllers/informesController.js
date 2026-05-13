@@ -75,3 +75,31 @@ exports.crearInforme = async (req, res) => {
   }
 
 };
+/* OBTENER INFORMES */
+exports.obtenerInformes = async (req, res) => {
+
+  try {
+
+    const informes = await Informe.find();
+
+    res.json({
+
+      ok: true,
+
+      data: informes
+
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+
+      ok: false,
+
+      error: error.message
+
+    });
+
+  }
+
+};
