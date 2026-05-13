@@ -45,7 +45,9 @@ exports.crearInforme = async (req, res) => {
       proyecto,
       sitio,
       descripcion,
-      fecha,
+      fecha: fecha || new Date(),
+      personas: JSON.parse(personas || "[]"),
+
       personas,
       fotos,
       videos
