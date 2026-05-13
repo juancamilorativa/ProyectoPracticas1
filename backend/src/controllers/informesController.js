@@ -87,7 +87,26 @@ exports.obtenerInformes = async (req, res) => {
 
   try {
 
+    const Tecnico = require("../models/Tecnico");
+
     const informes = await Informe.find();
+
+    for (let informe of informes) {
+
+      let nombres = [];
+
+      if (informe.personas && informe.personas.length > 0) {
+
+        const tecnicos = await Tecnico.find({
+          _id: { $in: informe.personas }
+        });
+
+        nombres = tecnicos.map(t => t.nombre);
+
+      }
+
+      informe._doc.responsables = nombres.join(", ");
+    }
 
     res.json({
 
