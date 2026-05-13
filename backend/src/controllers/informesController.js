@@ -68,6 +68,9 @@ exports.crearInforme = async (req, res) => {
 
   } catch (error) {
 
+    console.log("🔥 ERROR INFORME:", error);
+
+
     res.status(500).json({
 
       ok: false,
