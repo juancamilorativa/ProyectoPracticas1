@@ -98,20 +98,21 @@ exports.obtenerInformes = async (req, res) => {
       let responsables = "";
 
       if (
-        informe.personas &&
-        Array.isArray(informe.personas) &&
-        informe.personas.length > 0
-      ) {
+  informe.personas &&
+  Array.isArray(informe.personas) &&
+  informe.personas.length > 0
+) {
 
-        const tecnicos = await Tecnico.find({
-          _id: { $in: informe.personas }
-        });
+  const tecnicos = await Tecnico.find();
 
-        responsables = tecnicos
-          .map(t => t.nombre)
-          .join(", ");
-      }
+  const filtrados = tecnicos.filter(t =>
+    informe.personas.includes(t._id.toString())
+  );
 
+  responsables = filtrados
+    .map(t => t.nombre)
+    .join(", ");
+}
       nuevosInformes.push({
         ...informe._doc,
         responsables
