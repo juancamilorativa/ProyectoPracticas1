@@ -29,9 +29,9 @@ exports.addProyecto = async (req, res) => {
 
   try {
 
-    const { nombre } = req.body;
+    const { numero, sitio } = req.body;
 
-    if (!nombre) {
+     if (!numero || !sitio) {
 
       return res.status(400).json({
         ok: false,
@@ -41,8 +41,9 @@ exports.addProyecto = async (req, res) => {
     }
 
     const nuevoProyecto = new Proyecto({
-      nombre
-    });
+    numero,
+  sitio
+   });
 
     await nuevoProyecto.save();
 
