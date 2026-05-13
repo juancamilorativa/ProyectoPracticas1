@@ -10,7 +10,8 @@ exports.crearInforme = async (req, res) => {
       proyecto,
       sitio,
       descripcion,
-      fecha
+      fecha, 
+      personas
 
     } = req.body;
 
@@ -45,6 +46,7 @@ exports.crearInforme = async (req, res) => {
       sitio,
       descripcion,
       fecha,
+      personas,
       fotos,
       videos
 

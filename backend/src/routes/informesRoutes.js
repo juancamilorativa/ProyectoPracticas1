@@ -14,7 +14,7 @@ router.post(
 
   "/",
 
-  upload.array("archivos", 20),
+  upload.array("fotos", 20),
 
   informeController.crearInforme
 

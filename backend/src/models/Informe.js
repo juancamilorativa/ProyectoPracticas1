@@ -10,6 +10,8 @@ const InformeSchema = new mongoose.Schema({
 
   fecha: Date,
 
+  personas: [String],
+
   fotos: [String],
 
   videos: [String]
