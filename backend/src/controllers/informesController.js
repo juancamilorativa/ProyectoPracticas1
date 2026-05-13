@@ -91,39 +91,45 @@ exports.obtenerInformes = async (req, res) => {
 
     const informes = await Informe.find();
 
+    const nuevosInformes = [];
+
     for (let informe of informes) {
 
-      let nombres = [];
+      let responsables = "";
 
-      if (informe.personas && informe.personas.length > 0) {
+      if (
+        informe.personas &&
+        Array.isArray(informe.personas) &&
+        informe.personas.length > 0
+      ) {
 
         const tecnicos = await Tecnico.find({
           _id: { $in: informe.personas }
         });
 
-        nombres = tecnicos.map(t => t.nombre);
-
+        responsables = tecnicos
+          .map(t => t.nombre)
+          .join(", ");
       }
 
-      informe._doc.responsables = nombres.join(", ");
+      nuevosInformes.push({
+        ...informe._doc,
+        responsables
+      });
     }
 
     res.json({
-
       ok: true,
-
-      data: informes
-
+      data: nuevosInformes
     });
 
   } catch (error) {
 
+    console.log("🔥 ERROR OBTENER:", error);
+
     res.status(500).json({
-
       ok: false,
-
       error: error.message
-
     });
 
   }
