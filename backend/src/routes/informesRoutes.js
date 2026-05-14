@@ -20,4 +20,7 @@ router.post(
 
 );
 
+router.put("/:id", informeController.editarInforme);
+router.delete("/:id", informeController.eliminarInforme);
+
 module.exports = router;

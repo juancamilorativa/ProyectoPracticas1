@@ -47,8 +47,6 @@ exports.crearInforme = async (req, res) => {
       descripcion,
       fecha: fecha || new Date(),
       personas: JSON.parse(personas || "[]"),
-
-     
       fotos,
       videos
 
@@ -127,6 +125,74 @@ exports.obtenerInformes = async (req, res) => {
   } catch (error) {
 
     console.log("🔥 ERROR OBTENER:", error);
+
+    res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+
+  }
+
+};
+
+/* EDITAR INFORME */
+exports.editarInforme = async (req, res) => {
+
+  try {
+
+    const { id } = req.params;
+
+    const { fecha, descripcion } = req.body;
+
+    const informeActualizado =
+      await Informe.findByIdAndUpdate(
+
+        id,
+
+        {
+          fecha,
+          descripcion
+        },
+
+        { new: true }
+
+      );
+
+    res.json({
+
+      ok: true,
+      data: informeActualizado
+
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+
+      ok: false,
+      error: error.message
+
+    });
+
+  }
+
+};
+
+/* ELIMINAR INFORME */
+exports.eliminarInforme = async (req, res) => {
+
+  try {
+
+    const { id } = req.params;
+
+    await Informe.findByIdAndDelete(id);
+
+    res.json({
+      ok: true,
+      mensaje: "Informe eliminado"
+    });
+
+  } catch (error) {
 
     res.status(500).json({
       ok: false,
