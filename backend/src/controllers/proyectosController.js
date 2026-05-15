@@ -1,7 +1,9 @@
 const Proyecto = require("../models/Proyecto");
 
-/* LISTAR */
-exports.getProyectos = async (req, res) => {
+/* =========================
+   LISTAR
+========================= */
+const getProyectos = async (req, res) => {
 
   try {
 
@@ -24,26 +26,28 @@ exports.getProyectos = async (req, res) => {
 
 };
 
-/* CREAR */
-exports.addProyecto = async (req, res) => {
+/* =========================
+   CREAR
+========================= */
+const addProyecto = async (req, res) => {
 
   try {
 
     const { numero, sitio } = req.body;
 
-     if (!numero || !sitio) {
+    if (!numero || !sitio) {
 
       return res.status(400).json({
         ok: false,
-        mensaje: "El nombre es obligatorio"
+        mensaje: "Campos obligatorios"
       });
 
     }
 
     const nuevoProyecto = new Proyecto({
-    numero,
-  sitio
-   });
+      numero,
+      sitio
+    });
 
     await nuevoProyecto.save();
 
@@ -64,8 +68,10 @@ exports.addProyecto = async (req, res) => {
 
 };
 
-/* ELIMINAR */
-exports.deleteProyecto = async (req, res) => {
+/* =========================
+   ELIMINAR
+========================= */
+const deleteProyecto = async (req, res) => {
 
   try {
 
@@ -87,4 +93,10 @@ exports.deleteProyecto = async (req, res) => {
 
   }
 
+};
+
+module.exports = {
+  getProyectos,
+  addProyecto,
+  deleteProyecto
 };
