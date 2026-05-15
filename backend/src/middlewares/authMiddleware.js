@@ -1,13 +1,15 @@
 const jwt = require("jsonwebtoken");
 
-module.exports = (req, res, next) => {
+/* =========================
+   VERIFICAR TOKEN
+========================= */
+const verifyToken = (req, res, next) => {
 
   try {
 
-    const token =
-      req.headers.authorization?.split(" ")[1];
+    const authHeader = req.headers.authorization;
 
-    if (!token) {
+    if (!authHeader) {
 
       return res.status(401).json({
         ok: false,
@@ -15,6 +17,8 @@ module.exports = (req, res, next) => {
       });
 
     }
+
+    const token = authHeader.split(" ")[1];
 
     const decoded = jwt.verify(
       token,
@@ -27,11 +31,48 @@ module.exports = (req, res, next) => {
 
   } catch (error) {
 
-    res.status(401).json({
+    return res.status(401).json({
       ok: false,
       error: "Token inválido"
     });
 
   }
 
+};
+
+/* =========================
+   SOLO ADMIN
+========================= */
+const soloAdmin = (req, res, next) => {
+
+  try {
+
+    if (req.user.rol !== "admin") {
+
+      return res.status(403).json({
+        ok: false,
+        error: "Acceso denegado"
+      });
+
+    }
+
+    next();
+
+  } catch (error) {
+
+    return res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+
+  }
+
+};
+
+/* =========================
+   EXPORTAR
+========================= */
+module.exports = {
+  verifyToken,
+  soloAdmin
 };
