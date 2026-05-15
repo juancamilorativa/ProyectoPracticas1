@@ -24,9 +24,13 @@ const UserSchema = new mongoose.Schema({
     default: "tecnico"
   },
 
-  resetToken: String,
+  resetToken: {
+    type: String
+  },
 
-  resetTokenExpira: Date
+  resetTokenExpira: {
+    type: Date
+  }
 
 }, {
   timestamps: true

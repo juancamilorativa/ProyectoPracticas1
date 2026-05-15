@@ -8,14 +8,25 @@ const crypto = require("crypto");
 
 const nodemailer = require("nodemailer");
 
-/* LOGIN */
+/* =========================
+   LOGIN
+========================= */
 exports.login = async (req, res) => {
 
   try {
 
-    const { email, password } = req.body;
+    const { correo, password } = req.body;
 
-    const user = await User.findOne({ email });
+    if (!correo || !password) {
+
+      return res.status(400).json({
+        ok: false,
+        error: "Campos incompletos"
+      });
+
+    }
+
+    const user = await User.findOne({ correo });
 
     if (!user) {
 
@@ -54,8 +65,15 @@ exports.login = async (req, res) => {
       ok: true,
 
       data: {
+
         token,
-        rol: user.rol
+
+        rol: user.rol,
+
+        nombre: user.nombre,
+
+        correo: user.correo
+
       }
 
     });
@@ -63,32 +81,52 @@ exports.login = async (req, res) => {
   } catch (error) {
 
     res.status(500).json({
+
       ok: false,
+
       error: error.message
+
     });
 
   }
 
 };
 
-/* CREAR USUARIO */
+/* =========================
+   CREAR USUARIO
+========================= */
 exports.crearUsuario = async (req, res) => {
 
   try {
 
     const {
 
-      email,
+      nombre,
+      correo,
       password,
       rol
 
     } = req.body;
 
-    const existe = await User.findOne({ email });
+    if (
+      !nombre ||
+      !correo ||
+      !password ||
+      !rol
+    ) {
+
+      return res.status(400).json({
+        ok: false,
+        error: "Campos incompletos"
+      });
+
+    }
+
+    const existe = await User.findOne({ correo });
 
     if (existe) {
 
-      return res.json({
+      return res.status(400).json({
         ok: false,
         error: "El usuario ya existe"
       });
@@ -99,7 +137,9 @@ exports.crearUsuario = async (req, res) => {
 
     const nuevo = new User({
 
-      email,
+      nombre,
+
+      correo,
 
       password: hash,
 
@@ -113,7 +153,9 @@ exports.crearUsuario = async (req, res) => {
 
       ok: true,
 
-      mensaje: "Usuario creado"
+      mensaje: "Usuario creado",
+
+      data: nuevo
 
     });
 
@@ -122,6 +164,7 @@ exports.crearUsuario = async (req, res) => {
     res.status(500).json({
 
       ok: false,
+
       error: error.message
 
     });
@@ -130,65 +173,95 @@ exports.crearUsuario = async (req, res) => {
 
 };
 
-/* LISTAR */
+/* =========================
+   LISTAR USUARIOS
+========================= */
 exports.obtenerUsuarios = async (req, res) => {
 
   try {
 
     const users = await User.find()
-      .select("-password");
+      .select("-password")
+      .sort({ createdAt: -1 });
 
     res.json({
+
       ok: true,
+
       data: users
+
     });
 
   } catch (error) {
 
     res.status(500).json({
+
       ok: false,
+
       error: error.message
+
     });
 
   }
 
 };
 
-/* ELIMINAR */
+/* =========================
+   ELIMINAR USUARIO
+========================= */
 exports.eliminarUsuario = async (req, res) => {
 
   try {
 
-    await User.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+
+    await User.findByIdAndDelete(id);
 
     res.json({
+
       ok: true,
+
       mensaje: "Usuario eliminado"
+
     });
 
   } catch (error) {
 
     res.status(500).json({
+
       ok: false,
+
       error: error.message
+
     });
 
   }
 
 };
 
-/* RECUPERAR */
+/* =========================
+   RECUPERAR PASSWORD
+========================= */
 exports.recuperarPassword = async (req, res) => {
 
   try {
 
-    const { email } = req.body;
+    const { correo } = req.body;
 
-    const user = await User.findOne({ email });
+    if (!correo) {
+
+      return res.status(400).json({
+        ok: false,
+        error: "Correo requerido"
+      });
+
+    }
+
+    const user = await User.findOne({ correo });
 
     if (!user) {
 
-      return res.json({
+      return res.status(404).json({
         ok: false,
         error: "Correo no encontrado"
       });
@@ -201,7 +274,7 @@ exports.recuperarPassword = async (req, res) => {
 
     user.resetToken = token;
 
-    user.resetTokenExpire =
+    user.resetTokenExpira =
       Date.now() + 3600000;
 
     await user.save();
@@ -227,16 +300,18 @@ exports.recuperarPassword = async (req, res) => {
 
       from: process.env.EMAIL_USER,
 
-      to: email,
+      to: correo,
 
       subject: "Recuperar contraseña",
 
       html: `
-      <h2>Recuperación</h2>
+        <h2>Recuperación de contraseña</h2>
 
-      <a href="${link}">
-        Restablecer contraseña
-      </a>
+        <p>Haz clic en el siguiente enlace:</p>
+
+        <a href="${link}">
+          Restablecer contraseña
+        </a>
       `
 
     });
@@ -244,6 +319,7 @@ exports.recuperarPassword = async (req, res) => {
     res.json({
 
       ok: true,
+
       mensaje: "Correo enviado"
 
     });
@@ -253,6 +329,7 @@ exports.recuperarPassword = async (req, res) => {
     res.status(500).json({
 
       ok: false,
+
       error: error.message
 
     });
@@ -261,7 +338,9 @@ exports.recuperarPassword = async (req, res) => {
 
 };
 
-/* RESET PASSWORD */
+/* =========================
+   RESET PASSWORD
+========================= */
 exports.resetPassword = async (req, res) => {
 
   try {
@@ -273,11 +352,20 @@ exports.resetPassword = async (req, res) => {
 
     } = req.body;
 
+    if (!token || !password) {
+
+      return res.status(400).json({
+        ok: false,
+        error: "Datos incompletos"
+      });
+
+    }
+
     const user = await User.findOne({
 
       resetToken: token,
 
-      resetTokenExpire: {
+      resetTokenExpira: {
         $gt: Date.now()
       }
 
@@ -285,10 +373,11 @@ exports.resetPassword = async (req, res) => {
 
     if (!user) {
 
-      return res.json({
+      return res.status(400).json({
 
         ok: false,
-        error: "Token inválido"
+
+        error: "Token inválido o expirado"
 
       });
 
@@ -300,13 +389,14 @@ exports.resetPassword = async (req, res) => {
 
     user.resetToken = undefined;
 
-    user.resetTokenExpire = undefined;
+    user.resetTokenExpira = undefined;
 
     await user.save();
 
     res.json({
 
       ok: true,
+
       mensaje: "Contraseña actualizada"
 
     });
@@ -316,6 +406,7 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({
 
       ok: false,
+
       error: error.message
 
     });
