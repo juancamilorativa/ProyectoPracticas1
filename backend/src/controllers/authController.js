@@ -281,17 +281,25 @@ exports.recuperarPassword = async (req, res) => {
 
     const transporter = nodemailer.createTransport({
 
-      service: "gmail",
+  host: "smtp.gmail.com",
 
-      auth: {
+  port: 587,
 
-        user: process.env.EMAIL_USER,
+  secure: false,
 
-        pass: process.env.EMAIL_PASS
+  auth: {
 
-      }
+    user: process.env.EMAIL_USER,
 
-    });
+    pass: process.env.EMAIL_PASS
+
+  },
+
+  tls: {
+    rejectUnauthorized: false
+  }
+
+});
 
     const link =
       `http://localhost:5500/reset.html?token=${token}`;

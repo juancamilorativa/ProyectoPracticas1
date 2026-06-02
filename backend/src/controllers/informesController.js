@@ -10,31 +10,71 @@ exports.crearInforme = async (req, res) => {
       proyecto,
       sitio,
       descripcion,
-      fecha, 
+      fecha,
       personas
 
     } = req.body;
+
+    /* VALIDAR CAMPOS */
+    if (
+      !proyecto ||
+      !sitio ||
+      !descripcion ||
+      !personas
+    ) {
+
+      return res.status(400).json({
+
+        ok: false,
+
+        error: "Todos los campos son obligatorios"
+
+      });
+
+    }
+
+    /* VALIDAR ARCHIVOS */
+    if (!req.files || req.files.length === 0) {
+
+      return res.status(400).json({
+
+        ok: false,
+
+        error: "Debes cargar mínimo una imagen"
+
+      });
+
+    }
 
     let fotos = [];
 
     let videos = [];
 
     /* ARCHIVOS */
-    if (req.files) {
+    req.files.forEach(file => {
 
-      req.files.forEach(file => {
+      if (file.mimetype.startsWith("image")) {
 
-        if (file.mimetype.startsWith("image")) {
+        fotos.push(file.filename);
 
-          fotos.push(file.filename);
+      }
 
-        }
+      if (file.mimetype.startsWith("video")) {
 
-        if (file.mimetype.startsWith("video")) {
+        videos.push(file.filename);
 
-          videos.push(file.filename);
+      }
 
-        }
+    });
+
+    /* VALIDAR QUE HAYA AL MENOS UNA FOTO */
+    if (fotos.length === 0) {
+
+      return res.status(400).json({
+
+        ok: false,
+
+        error: "Debes subir mínimo una imagen"
 
       });
 
@@ -43,11 +83,17 @@ exports.crearInforme = async (req, res) => {
     const nuevoInforme = new Informe({
 
       proyecto,
+
       sitio,
+
       descripcion,
+
       fecha: fecha || new Date(),
+
       personas: JSON.parse(personas || "[]"),
+
       fotos,
+
       videos
 
     });
@@ -67,7 +113,6 @@ exports.crearInforme = async (req, res) => {
   } catch (error) {
 
     console.log("🔥 ERROR INFORME:", error);
-
 
     res.status(500).json({
 
