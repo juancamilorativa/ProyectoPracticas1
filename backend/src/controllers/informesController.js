@@ -20,6 +20,7 @@ exports.crearInforme = async (req, res) => {
       !proyecto ||
       !sitio ||
       !descripcion ||
+      !fechaEjecucion ||
       !personas
     ) {
 
@@ -50,7 +51,7 @@ exports.crearInforme = async (req, res) => {
 
     let videos = [];
 
-    /* ARCHIVOS */
+    /* RECORRER ARCHIVOS */
     req.files.forEach(file => {
 
       if (file.mimetype.startsWith("image")) {
@@ -67,7 +68,7 @@ exports.crearInforme = async (req, res) => {
 
     });
 
-    /* VALIDAR QUE HAYA AL MENOS UNA FOTO */
+    /* VALIDAR FOTO */
     if (fotos.length === 0) {
 
       return res.status(400).json({
@@ -88,10 +89,11 @@ exports.crearInforme = async (req, res) => {
 
       descripcion,
 
-      // FECHA DE EJECUCIÓN
-      fechaEjecucion: fecha,
+      fechaCreacion: new Date(),
 
-      personas: JSON.parse(personas || "[]"),
+      fechaEjecucion: new Date(fechaEjecucion),
+
+      personas: JSON.parse(personas),
 
       fotos,
 
