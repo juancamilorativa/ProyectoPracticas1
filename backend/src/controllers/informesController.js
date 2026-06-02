@@ -88,7 +88,8 @@ exports.crearInforme = async (req, res) => {
 
       descripcion,
 
-      fecha: fecha || new Date(),
+      // FECHA DE EJECUCIÓN
+      fechaEjecucion: fecha,
 
       personas: JSON.parse(personas || "[]"),
 

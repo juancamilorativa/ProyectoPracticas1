@@ -8,7 +8,23 @@ const InformeSchema = new mongoose.Schema({
 
   descripcion: String,
 
-  fecha: Date,
+  // FECHA AUTOMÁTICA
+  fechaCreacion: {
+
+    type: Date,
+
+    default: Date.now
+
+  },
+
+  // FECHA DE EJECUCIÓN
+  fechaEjecucion: {
+
+    type: Date,
+
+    required: true
+
+  },
 
   personas: [String],
 
